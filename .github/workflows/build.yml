@@ -1,27 +1,42 @@
-name: Build
+name: Build and SonarQube Analysis
 
 on:
   push:
     branches:
-      - main
-
+      - main  # Change if you're using a different branch name
 
 jobs:
   build:
-    name: Build and analyze
-    runs-on: windows-latest
-    
+    name: Build and Analyze Juice Shop
+    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: SonarSource/sonarqube-scan-action@v5
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests with Coverage
+        run: npm run test
+
+      - name: Check if lcov.info exists
+        run: |
+          if [ -f frontend/dist/frontend/coverage/lcov.info ]; then
+            echo "Coverage file found"
+          else
+            echo "lcov.info not found!" && exit 1
+          fi
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      # If you wish to fail your job when the Quality Gate is red, uncomment the
-      # following lines. This would typically be used to fail a deployment.
-      # - uses: SonarSource/sonarqube-quality-gate-action@v1
-      #   timeout-minutes: 5
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
